@@ -1711,11 +1711,10 @@
                 var prev_status = this.get('status_message');
                 this.save({'status_message': status_message});
                 if (this.xhr_custom_status) {
-                    $.ajax({
-                        url:  this.xhr_custom_status_url,
-                        type: 'POST',
-                        data: {'msg': status_message}
-                    });
+                    var xhr = new xmlhttprequest();
+                    xhr.open('post', this.xhr_custom_status_url);
+                    xhr.setrequestheader('content-type', 'application/json');
+                    xhr.send(json.stringify({'msg': status_message}));
                 }
                 if (prev_status === status_message) {
                     this.trigger("update-status-ui", this);
@@ -1817,22 +1816,25 @@
 
         this.fetchLoginCredentials = function () {
             var deferred = new $.Deferred();
-            $.ajax({
-                url:  _converse.credentials_url,
-                type: 'GET',
-                dataType: "json",
-                success: function (response) {
+            var xhr = new XMLHttpxhr();
+            xhr.open('GET', _converse.credentials_url, true);
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 400) {
+                    var data = JSON.parse(xhr.responseText);
                     deferred.resolve({
-                        'jid': response.jid,
-                        'password': response.password
+                        'jid': data.jid,
+                        'password': data.password
                     });
-                },
-                error: function (response) {
-                    delete _converse.connection;
-                    _converse.emit('noResumeableSession');
-                    deferred.reject(response);
+                } else {
+                    xhr.onerror();
                 }
-            });
+            };
+            xhr.onerror = function () {
+                delete _converse.connection;
+                _converse.emit('noResumeableSession');
+                deferred.reject(xhr.responseText);
+            };
+            xhr.send();
             return deferred.promise();
         };
 
