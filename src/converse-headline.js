@@ -54,7 +54,8 @@
                 events: {
                     'click .close-chatbox-button': 'close',
                     'click .toggle-chatbox-button': 'minimize',
-                    'keypress textarea.chat-textarea': 'keyPressed'
+                    'keypress textarea.chat-textarea': 'keyPressed',
+                    'click .send-button': 'clickSendButton'
                 },
 
                 initialize: function () {

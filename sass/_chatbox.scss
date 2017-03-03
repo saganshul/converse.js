@@ -250,10 +250,18 @@
             .chat-textarea {
                 @include border-bottom-radius($chatbox-border-radius);
                 border: 0;
-                height: $chat-textarea-height;
+                height: $chat-textarea-height - 35px;
                 padding: 0.5em;
                 width: 100%;
                 resize: none;
+            }
+            .send-button {
+                position:absolute;
+                bottom:5px;
+                right:10px;
+                background-color: #E76F51;
+                color: #fff;
+                font-size: 80%;
             }
             .chat-toolbar {
                 box-sizing: border-box;
@@ -388,4 +396,3 @@
         }
     }
 }
-

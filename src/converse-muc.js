@@ -84,9 +84,8 @@
     var ROOMSTATUS = {
         CONNECTED: 0,
         CONNECTING: 1,
-        NICKNAME_REQUIRED: 2,
-        DISCONNECTED: 3,
-        ENTERED: 4
+        DISCONNECTED: 2,
+        ENTERED: 3
     };
 
     converse.plugins.add('converse-muc', {
@@ -335,7 +334,8 @@
                     'click .toggle-occupants a': 'toggleOccupants',
                     'click .new-msgs-indicator': 'viewUnreadMessages',
                     'click .occupant': 'onOccupantClicked',
-                    'keypress .chat-textarea': 'keyPressed'
+                    'keypress .chat-textarea': 'keyPressed',
+                    'click .send-button': 'clickSendButton'
                 },
 
                 initialize: function () {
@@ -1251,7 +1251,8 @@
                     this.$el.find('div.chatroom-form-container').hide(
                         function () {
                             $(this).remove();
-                            that.renderAfterTransition();
+                            that.$el.find('.chat-area').removeClass('hidden');
+                            that.$el.find('.occupants').removeClass('hidden');
                         });
                     return deferred.promise();
                 },
@@ -1305,7 +1306,8 @@
                     this.$el.find('div.chatroom-form-container').hide(
                         function () {
                             $(this).remove();
-                            that.renderAfterTransition();
+                            that.$el.find('.chat-area').removeClass('hidden');
+                            that.$el.find('.occupants').removeClass('hidden');
                         });
                 },
 
@@ -1399,16 +1401,15 @@
                      *      case, auto-configure won't happen, regardless of
                      *      the settings.
                      */
+                    var that = this;
                     if (_.isUndefined(ev) && this.model.get('auto_configure')) {
-                        this.fetchRoomConfiguration().then(
-                            this.autoConfigureChatRoom.bind(this));
+                        this.fetchRoomConfiguration().then(that.autoConfigureChatRoom.bind(that));
                     } else {
                         if (!_.isUndefined(ev) && ev.preventDefault) {
                             ev.preventDefault();
                         }
                         this.showSpinner();
-                        this.fetchRoomConfiguration().then(
-                            this.renderConfigurationForm.bind(this));
+                        this.fetchRoomConfiguration().then(that.renderConfigurationForm.bind(that));
                     }
                 },
 
@@ -1426,8 +1427,7 @@
                     else {
                         $nick.removeClass('error');
                     }
-                    this.$el.find('.chatroom-form-container')
-                            .replaceWith('<span class="spinner centered"/>');
+                    this.$el.find('.chatroom-form-container').replaceWith('<span class="spinner centered"/>');
                     this.join(nick);
                 },
 
@@ -1512,8 +1512,7 @@
                         }
                     } else {
                         this.renderNicknameForm(
-                            __("The nickname you chose is reserved or "+
-                               "currently in use, please choose a different one.")
+                            __("The nickname you chose is reserved or currently in use, please choose a different one.")
                         );
                     }
                 },
@@ -1534,7 +1533,6 @@
                             label_join: __('Enter room'),
                             validation_message: message
                         }));
-                    this.model.save('connection_status', ROOMSTATUS.NICKNAME_REQUIRED);
                     this.$('.chatroom-form').on('submit', this.submitNickname.bind(this));
                 },
 
@@ -1768,29 +1766,20 @@
                     this.$el.find('.chatroom-body').prepend('<span class="spinner centered"/>');
                 },
 
-                renderAfterTransition: function () {
-                    /* Rerender the room after some kind of transition. For
-                     * example after the spinner has been removed or after a
-                     * form has been submitted and removed.
-                     */
-                    if (this.model.get('connection_status') == ROOMSTATUS.NICKNAME_REQUIRED) {
-                        this.renderNicknameForm();
-                    } else {
-                        this.$el.find('.chat-area').removeClass('hidden');
-                        this.$el.find('.occupants').removeClass('hidden');
-                        this.scrollDown();
-                    }
-                },
-
                 hideSpinner: function () {
                     /* Check if the spinner is being shown and if so, hide it.
                      * Also make sure then that the chat area and occupants
                      * list are both visible.
                      */
-                    var spinner = this.el.querySelector('.spinner');
-                    if (!_.isNull(spinner)) {
-                        spinner.parentNode.removeChild(spinner);
-                        this.renderAfterTransition();
+                    var that = this;
+                    var $spinner = this.$el.find('.spinner');
+                    if ($spinner.length) {
+                        $spinner.hide(function () {
+                            $(this).remove();
+                            that.$el.find('.chat-area').removeClass('hidden');
+                            that.$el.find('.occupants').removeClass('hidden');
+                            that.scrollDown();
+                        });
                     }
                     return this;
                 },
@@ -1900,7 +1889,7 @@
                     this.model.createMessage(message, delay, original_stanza);
                     if (sender !== this.model.get('nick')) {
                         // We only emit an event if it's not our own message
-                        _converse.emit('message', original_stanza);
+                        _converse.emit('message', message);
                     }
                     return true;
                 }

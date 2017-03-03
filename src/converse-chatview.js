@@ -91,6 +91,7 @@
                 events: {
                     'click .close-chatbox-button': 'close',
                     'keypress .chat-textarea': 'keyPressed',
+                    'click .send-button': 'clickSendButton',
                     'click .toggle-smiley': 'toggleEmoticonMenu',
                     'click .toggle-smiley ul li': 'insertEmoticon',
                     'click .toggle-clear': 'clearMessages',
@@ -221,7 +222,7 @@
                             insert.call(that.$content, $el);
                             return $el;
                         },
-                        this.scrollDown.bind(this)
+                        this.scrollDownMessageHeight.bind(this)
                     )(this.renderMessage(attrs));
                 },
 
@@ -288,7 +289,7 @@
                                 this.$content.find('.chat-message[data-isodate="'+msg_dates[idx]+'"]'));
                             return $el;
                         }.bind(this),
-                        this.scrollDown.bind(this)
+                        this.scrollDownMessageHeight.bind(this)
                     )(this.renderMessage(attrs));
                 },
 
@@ -589,6 +590,21 @@
                     }
                 },
 
+                clickSendButton: function (ev) {
+                    /* Event handler for when a send button is clicked in a chat box textarea.
+                     */
+                    ev.preventDefault();
+                    var textarea = $(ev.target).siblings('.chat-textarea')[0], message;
+                    message = textarea.value;
+                    textarea.value = '';
+                    textarea.focus();
+                    if (message !== '') {
+                        this.onMessageSubmitted(message);
+                        _converse.emit('messageSend', message);
+                    }
+                    this.setChatState(_converse.ACTIVE);
+                },
+
                 clearMessages: function (ev) {
                     if (ev && ev.preventDefault) { ev.preventDefault(); }
                     var result = confirm(__("Are you sure you want to clear the messages from this chat box?"));
@@ -776,13 +792,6 @@
                     return this;
                 },
 
-                hideNewMessagesIndicator: function () {
-                    var new_msgs_indicator = this.el.querySelector('.new-msgs-indicator');
-                    if (!_.isNull(new_msgs_indicator)) {
-                        new_msgs_indicator.classList.add('hidden');
-                    }
-                },
-
                 markScrolled: _.debounce(function (ev) {
                     /* Called when the chat content is scrolled up or down.
                      * We want to record when the user has scrolled away from
@@ -791,19 +800,12 @@
                      * received.
                      */
                     if (ev && ev.preventDefault) { ev.preventDefault(); }
-                    if (this.model.get('auto_scrolled')) {
-                        this.model.set({
-                            'scrolled': false,
-                            'auto_scrolled': false
-                        });
-                        return;
-                    }
                     var is_at_bottom =
                         (this.$content.scrollTop() + this.$content.innerHeight()) >=
                             this.$content[0].scrollHeight-10;
                     if (is_at_bottom) {
-                        this.hideNewMessagesIndicator();
                         this.model.save('scrolled', false);
+                        this.$el.find('.new-msgs-indicator').addClass('hidden');
                     } else {
                         // We're not at the bottom of the chat area, so we mark
                         // that the box is in a scrolled-up state.
@@ -816,12 +818,19 @@
                     this.scrollDown();
                 },
 
+                scrollDownMessageHeight: function ($message) {
+                    if (this.$content.is(':visible') && !this.model.get('scrolled')) {
+                        this.$content.scrollTop(
+                            this.$content.scrollTop() + $message[0].scrollHeight);
+                    }
+                    return this;
+                },
+
                 _scrollDown: function () {
                     /* Inner method that gets debounced */
                     if (this.$content.is(':visible') && !this.model.get('scrolled')) {
                         this.$content.scrollTop(this.$content[0].scrollHeight);
-                        this.hideNewMessagesIndicator();
-                        this.model.save({'auto_scrolled': true});
+                        this.$el.find('.new-msgs-indicator').addClass('hidden');
                     }
                 },
 
